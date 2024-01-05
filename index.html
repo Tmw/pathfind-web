@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>pathfind-web</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="css/style.css" rel="stylesheet" />
+    <script type="application/javascript" src="index.js"></script>
+</head>
+
+<body>
+    <div class="app">
+        <div class="header">
+            <h1>pathfind</h1>
+
+            <div class="options">
+                <form id="options-form">
+                    <label for="tileSize">Tile Size (px)</label>
+                    <input type="number" name="tileSize" value="30" step="5" min="5" />
+
+                    <label for="gridHeight">Grid Height (in tiles)</label>
+                    <input type="number" name="gridHeight" value="30" min="2" />
+
+                    <label for="gridWidth">Grid Width (in tiles)</label>
+                    <input type="number" name="gridWidth" value="40" min="2" />
+                    <input type="submit" value="Reset" />
+                </form>
+
+                <button id="go-button">GO</button>
+            </div>
+        </div>
+        <div class="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+</body>
+
+</html>
