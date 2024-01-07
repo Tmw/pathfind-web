@@ -13,6 +13,7 @@
     finish: 4,
     candidate: 5,
     visited: 6,
+    path: 7,
   };
 
   let cursorTile = tileType.wall;
@@ -126,6 +127,11 @@
     ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
   }
 
+  function drawPath(x, y) {
+    ctx.fillStyle = "#ffcc00";
+    ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+  }
+
   function drawSelector(x, y) {
     ctx.beginPath();
     ctx.strokeStyle = "teal";
@@ -158,6 +164,9 @@
 
           case tileType.start:
             drawStart(x, y);
+            break;
+          case tileType.path:
+            drawPath(x, y);
             break;
 
           case tileType.finish:
@@ -212,8 +221,21 @@
   }
 
   function solve() {
-    // go from here
-    console.log("yeah");
+    const pathResp = window.bridge.solve(
+      JSON.stringify({
+        gridWidth,
+        gridHeight,
+        grid,
+      })
+    );
+
+    const path = JSON.parse(pathResp);
+    // only color the open cells in the path, leaving start and finish as is.
+    for (const { x, y } of path) {
+      if (getCellType(x, y) === tileType.open) {
+        setGridCell(x, y, tileType.path);
+      }
+    }
   }
 
   function updateGrid(e) {
@@ -228,6 +250,7 @@
   }
 
   function ready() {
+    loadWasm();
     // grab references to canvas
     canvas = document.getElementById("canvas");
     canvas.addEventListener("mousemove", mouseMove);
@@ -246,6 +269,14 @@
     resizeCanvas();
     makeGrid();
     loop();
+  }
+
+  function loadWasm() {
+    const go = new window.Go();
+    WebAssembly.instantiateStreaming(
+      fetch("bridge.wasm"),
+      go.importObject
+    ).then(({ instance }) => go.run(instance));
   }
 
   document.addEventListener("DOMContentLoaded", ready);
