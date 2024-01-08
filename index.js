@@ -238,6 +238,16 @@
     }
   }
 
+  function clear() {
+    for (let y = 0; y < gridHeight; y++) {
+      for (let x = 0; x < gridWidth; x++) {
+        if (getCellType(x, y) === tileType.path) {
+          setGridCell(x, y, tileType.open);
+        }
+      }
+    }
+  }
+
   function updateGrid(e) {
     e.preventDefault();
     tileSize = parseInt(document.querySelector("input[name=tileSize]").value);
@@ -262,8 +272,8 @@
     const optionsForm = document.getElementById("options-form");
     optionsForm.addEventListener("submit", updateGrid);
 
-    // listen go clicks on the go button
     document.getElementById("go-button").addEventListener("click", solve);
+    document.getElementById("clear-button").addEventListener("click", clear);
 
     // setup everything else
     resizeCanvas();
