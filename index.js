@@ -1,138 +1,52 @@
 (function main(window, document) {
-  let canvas, ctx, mouseX, mouseY, isMouseDown, grid;
+  let canvas, ctx;
 
-  let tileSize = 30;
-  let gridWidth = 40;
-  let gridHeight = 30;
-
-  const tileType = {
-    selector: 0,
-    open: 1,
-    wall: 2,
-    start: 3,
-    finish: 4,
-    candidate: 5,
-    visited: 6,
-    path: 7,
-  };
-
-  let cursorTile = tileType.wall;
-
-  function setGridCell(x, y, cellType) {
-    grid[y][x] = cellType;
+  function resizeCanvas(state) {
+    // TODO: Early return if no resize needed..
+    // perhaps not _always_ read canvas size from dom for performance,
+    // but let's try the dumb way first.
+    canvas.width = state.tile_size * state.grid.width + 1;
+    canvas.height = state.tile_size * state.grid.height + 1;
   }
 
-  function getCellType(x, y) {
-    return grid[y][x];
-  }
-
-  function resizeCanvas() {
-    canvas.width = tileSize * gridWidth + 1;
-    canvas.height = tileSize * gridHeight + 1;
-  }
-
-  function mouseMove(e) {
-    mouseX = e.offsetX;
-    mouseY = e.offsetY;
-
-    // support for dragging to place walls
-    const { x, y } = mouseToMapCoord();
-    if (
-      isMouseDown &&
-      cursorTile == tileType.wall &&
-      getCellType(x, y) === tileType.open
-    ) {
-      setGridCell(x, y, tileType.wall);
-    }
-
-    if (
-      isMouseDown &&
-      cursorTile == tileType.open &&
-      getCellType(x, y) === tileType.wall
-    ) {
-      setGridCell(x, y, tileType.open);
-    }
+  function mouseMove({ offsetX, offsetY }) {
+    window.bridge.mouseMove(
+      JSON.stringify({
+        x: offsetX,
+        y: offsetY,
+      })
+    );
   }
 
   function mouseDown() {
-    if (isMouseDown) return;
-    isMouseDown = true;
-    const { x, y } = mouseToMapCoord();
-    switch (getCellType(x, y)) {
-      case tileType.start:
-        setGridCell(x, y, tileType.open);
-        cursorTile = tileType.start;
-        break;
-
-      case tileType.finish:
-        setGridCell(x, y, tileType.open);
-        cursorTile = tileType.finish;
-        break;
-
-      case tileType.open:
-        cursorTile = tileType.wall;
-        break;
-
-      case tileType.wall:
-        cursorTile = tileType.open;
-        break;
-    }
+    window.bridge.mouseDown();
   }
 
   function mouseUp() {
-    isMouseDown = false;
-    const { x, y } = mouseToMapCoord();
-    switch (cursorTile) {
-      case tileType.start:
-        setGridCell(x, y, tileType.start);
-        cursorTile = tileType.selector;
-        break;
-
-      case tileType.finish:
-        setGridCell(x, y, tileType.finish);
-        cursorTile = tileType.selector;
-        break;
-
-      case tileType.open:
-        setGridCell(x, y, tileType.open);
-        cursorTile = tileType.selector;
-        break;
-
-      case tileType.wall:
-        setGridCell(x, y, tileType.wall);
-        cursorTile = tileType.selector;
-        break;
-    }
+    window.bridge.mouseUp();
   }
 
-  function mouseToMapCoord() {
-    return {
-      x: Math.min(Math.floor(mouseX / tileSize), gridWidth - 1),
-      y: Math.min(Math.floor(mouseY / tileSize), gridHeight - 1),
-    };
-  }
-
-  function drawStart(x, y) {
+  function drawStart(x, y, tileSize) {
     ctx.fillStyle = "#090";
     ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
   }
 
-  function drawFinish(x, y) {
+  function drawFinish(x, y, tileSize) {
     ctx.fillStyle = "#800";
     ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
   }
 
-  function drawWall(x, y) {
+  function drawWall(x, y, tileSize) {
     ctx.fillStyle = "#777";
     ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
   }
 
-  function drawPath(x, y) {
+  function drawPath(x, y, tileSize) {
     ctx.fillStyle = "#ffcc00";
     ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
   }
 
-  function drawSelector(x, y) {
+  function drawSelector(x, y, tileSize) {
     ctx.beginPath();
     ctx.strokeStyle = "teal";
     ctx.rect(x * tileSize, y * tileSize, tileSize, tileSize);
@@ -140,7 +54,7 @@
     ctx.stroke();
   }
 
-  function drawOpen(x, y) {
+  function drawOpen(x, y, tileSize) {
     ctx.strokeStyle = "#bbb";
     ctx.beginPath();
     ctx.rect(x * tileSize, y * tileSize, tileSize, tileSize);
@@ -148,145 +62,136 @@
     ctx.closePath();
   }
 
-  function drawGrid() {
+  function drawGrid(state) {
     ctx.lineWidth = 1;
 
-    for (let y = 0; y < gridHeight; y++) {
-      for (let x = 0; x < gridWidth; x++) {
-        switch (grid[y][x]) {
-          case tileType.open:
-            drawOpen(x, y);
-            break;
+    // use logic from state.
+    const renderFns = {
+      open: drawOpen,
+      wall: drawWall,
+      start: drawStart,
+      finish: drawFinish,
+      path: drawPath,
+    };
 
-          case tileType.wall:
-            drawWall(x, y);
-            break;
-
-          case tileType.start:
-            drawStart(x, y);
-            break;
-          case tileType.path:
-            drawPath(x, y);
-            break;
-
-          case tileType.finish:
-            drawFinish(x, y);
-            break;
+    for (let y = 0; y < state.grid.height; y++) {
+      for (let x = 0; x < state.grid.width; x++) {
+        const fn = renderFns[state.grid.tiles[y][x]];
+        if (fn) {
+          fn(x, y, state.tile_size);
         }
       }
     }
   }
 
-  function drawCursor() {
-    const { x, y } = mouseToMapCoord();
-    switch (cursorTile) {
-      case tileType.selector:
-        drawSelector(x, y);
+  function drawCursor(state) {
+    const { cursor_position, cursor_tile, tile_size } = state;
+
+    switch (cursor_tile) {
+      case "selector":
+        drawSelector(cursor_position.x, cursor_position.y, tile_size);
         break;
 
-      case tileType.start:
-        drawStart(x, y);
+      case "start":
+        drawStart(cursor_position.x, cursor_position.y, tile_size);
         break;
 
-      case tileType.finish:
-        drawFinish(x, y);
+      case "finish":
+        drawFinish(cursor_position.x, cursor_position.y, tile_size);
         break;
     }
-    drawSelector(x, y);
+
+    drawSelector(cursor_position.x, cursor_position.y, tile_size);
   }
 
-  function draw() {
+  function draw(state) {
     ctx.reset();
-    drawGrid();
-    drawCursor();
+    drawGrid(state);
+    drawCursor(state);
   }
 
-  function loop() {
-    draw();
+  function drawFPS(fps) {
+    ctx.fillStyle = "#333";
+    ctx.font = "12pt sans serif";
+    ctx.fillText(`${fps} fps`, 15, 15);
+  }
+
+  var prevDt = 0;
+  function loop(dt = 0) {
+    var state;
+    try {
+      state = JSON.parse(bridge.getState());
+    } catch (e) {
+      console.error("Error parsing JSON response from WASM", e);
+    }
+
+    resizeCanvas(state);
+    draw(state);
+
+    drawFPS(Math.round(1_000 / (dt - prevDt)));
+    prevDt = dt;
     window.requestAnimationFrame(loop);
   }
 
-  function makeGrid() {
-    grid = [];
-    for (let y = 0; y < gridHeight; y++) {
-      grid[y] = [];
-      for (let x = 0; x < gridWidth; x++) {
-        grid[y][x] = tileType.open;
-      }
-    }
-
-    grid[2][4] = tileType.wall;
-    grid[6][6] = tileType.start;
-    grid[12][18] = tileType.finish;
-  }
-
   function solve() {
-    const pathResp = window.bridge.solve(
-      JSON.stringify({
-        gridWidth,
-        gridHeight,
-        grid,
-      })
-    );
-
-    const path = JSON.parse(pathResp);
-    // only color the open cells in the path, leaving start and finish as is.
-    for (const { x, y } of path) {
-      if (getCellType(x, y) === tileType.open) {
-        setGridCell(x, y, tileType.path);
-      }
-    }
+    window.bridge.solve();
   }
 
   function clear() {
-    for (let y = 0; y < gridHeight; y++) {
-      for (let x = 0; x < gridWidth; x++) {
-        if (getCellType(x, y) === tileType.path) {
-          setGridCell(x, y, tileType.open);
-        }
-      }
-    }
+    // TODO: call out to the bridge
   }
 
   function updateGrid(e) {
     e.preventDefault();
-    tileSize = parseInt(document.querySelector("input[name=tileSize]").value);
-    gridHeight = parseInt(
+    const tileSize = parseInt(
+      document.querySelector("input[name=tileSize]").value
+    );
+    const height = parseInt(
       document.querySelector("input[name=gridHeight]").value
     );
-    gridWidth = parseInt(document.querySelector("input[name=gridWidth]").value);
-    resizeCanvas();
-    makeGrid();
+    const width = parseInt(
+      document.querySelector("input[name=gridWidth]").value
+    );
+
+    const req = {
+      tile_size: tileSize,
+      width,
+      height,
+    };
+
+    bridge.resize(JSON.stringify(req));
   }
 
   function ready() {
-    loadWasm();
-    // grab references to canvas
-    canvas = document.getElementById("canvas");
-    canvas.addEventListener("mousemove", mouseMove);
-    canvas.addEventListener("mousedown", mouseDown);
-    canvas.addEventListener("mouseup", mouseUp);
-    ctx = canvas.getContext("2d");
+    loadWasm().then(() => {
+      // grab references to canvas
+      canvas = document.getElementById("canvas");
+      canvas.addEventListener("mousemove", mouseMove);
+      canvas.addEventListener("mousedown", mouseDown);
+      canvas.addEventListener("mouseup", mouseUp);
+      ctx = canvas.getContext("2d");
 
-    // grab references to form elements
-    const optionsForm = document.getElementById("options-form");
-    optionsForm.addEventListener("submit", updateGrid);
+      // grab references to form elements
+      const optionsForm = document.getElementById("options-form");
+      optionsForm.addEventListener("submit", updateGrid);
 
-    document.getElementById("go-button").addEventListener("click", solve);
-    document.getElementById("clear-button").addEventListener("click", clear);
-
-    // setup everything else
-    resizeCanvas();
-    makeGrid();
-    loop();
+      document.getElementById("go-button").addEventListener("click", solve);
+      document.getElementById("clear-button").addEventListener("click", clear);
+      loop();
+    });
   }
 
-  function loadWasm() {
-    const go = new window.Go();
-    WebAssembly.instantiateStreaming(
-      fetch("bridge.wasm"),
-      go.importObject
-    ).then(({ instance }) => go.run(instance));
+  async function loadWasm() {
+    return new Promise((res) => {
+      const go = new window.Go();
+      WebAssembly.instantiateStreaming(
+        fetch("bridge.wasm"),
+        go.importObject
+      ).then(({ instance }) => {
+        go.run(instance);
+        res();
+      });
+    });
   }
 
   document.addEventListener("DOMContentLoaded", ready);
