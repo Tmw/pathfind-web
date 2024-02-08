@@ -40,28 +40,6 @@ type SolveRequest struct {
 	Grid       [][]TileType `json:"grid"`
 }
 
-func parseGrid(req SolveRequest) Grid {
-	g := Grid{
-		Tiles:  req.Grid,
-		Width:  req.GridWidth,
-		Height: req.GridHeight,
-	}
-
-	// find start and finish
-	for y := range req.Grid {
-		for x := range req.Grid[y] {
-			if req.Grid[y][x] == TileTypeStart {
-				g.start = Coordinate{X: x, Y: y}
-			}
-			if req.Grid[y][x] == TileTypeFinish {
-				g.finish = Coordinate{X: x, Y: y}
-			}
-		}
-	}
-
-	return g
-}
-
 func makeSolveFunc() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		state.Grid.Solve()
