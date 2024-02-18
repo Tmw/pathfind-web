@@ -13,14 +13,19 @@ var (
 	defaultTileSize   = 30
 	state             State
 )
-
-func main() {
+func initState() {
 	state = NewState(defaultTileSize)
 	state.Grid.Resize(defaultGridWidth, defaultGridHeight)
+}
+
+func main() {
+	initState()
 
 	// scope all functions under window.bridge
 	bridge := map[string]interface{}{
 		"solve":     makeSolveFunc(),
+		"clearPath": makeClearPathFunc(),
+		"reset":     makeResetFunc(),
 		"getState":  makeGetStateFunc(),
 		"mouseMove": makeMouseMoveFunc(),
 		"mouseDown": makeMouseDownFunc(),
@@ -43,6 +48,20 @@ type SolveRequest struct {
 func makeSolveFunc() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		state.Grid.Solve()
+		return nil
+	})
+}
+
+func makeClearPathFunc() js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		state.Grid.ClearPath()
+		return nil
+	})
+}
+
+func makeResetFunc() js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		initState()
 		return nil
 	})
 }

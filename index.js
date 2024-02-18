@@ -2,9 +2,6 @@
   let canvas, ctx;
 
   function resizeCanvas(state) {
-    // TODO: Early return if no resize needed..
-    // perhaps not _always_ read canvas size from dom for performance,
-    // but let's try the dumb way first.
     canvas.width = state.tile_size * state.grid.width + 1;
     canvas.height = state.tile_size * state.grid.height + 1;
   }
@@ -110,14 +107,7 @@
     drawCursor(state);
   }
 
-  function drawFPS(fps) {
-    ctx.fillStyle = "#333";
-    ctx.font = "12pt sans serif";
-    ctx.fillText(`${fps} fps`, 15, 15);
-  }
-
-  var prevDt = 0;
-  function loop(dt = 0) {
+  function loop() {
     var state;
     try {
       state = JSON.parse(bridge.getState());
@@ -127,9 +117,6 @@
 
     resizeCanvas(state);
     draw(state);
-
-    drawFPS(Math.round(1_000 / (dt - prevDt)));
-    prevDt = dt;
     window.requestAnimationFrame(loop);
   }
 
@@ -137,8 +124,12 @@
     window.bridge.solve();
   }
 
-  function clear() {
-    // TODO: call out to the bridge
+  function reset() {
+    window.bridge.reset();
+  }
+
+  function clearPath() {
+    window.bridge.clearPath();
   }
 
   function updateGrid(e) {
@@ -176,7 +167,12 @@
       optionsForm.addEventListener("submit", updateGrid);
 
       document.getElementById("go-button").addEventListener("click", solve);
-      document.getElementById("clear-button").addEventListener("click", clear);
+      document
+        .getElementById("clear-button")
+        .addEventListener("click", clearPath);
+
+      document.getElementById("reset-button").addEventListener("click", reset);
+
       loop();
     });
   }
