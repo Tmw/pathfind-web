@@ -22,6 +22,11 @@ func (s *State) OnMouseMove(x, y int) {
 	s.CursorPos.X = min(x/s.TileSize, s.Grid.Width-1)
 	s.CursorPos.Y = min(y/s.TileSize, s.Grid.Height-1)
 
+	// clear path when editing the grid
+	if s.MouseDown {
+		s.Grid.ClearPath()
+	}
+
 	// placing wall
 	if s.MouseDown &&
 		s.CursorTile == TileTypeWall &&
